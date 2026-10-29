@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>توزيع المبيعات</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: summary strip, one toolbar (search + filters), one wide table, add-row drawer. Blue shades only. */
+:root{
+  --bg:#eef4fd; --surface:#ffffff; --surface2:#e3edfb; --line:#c5d8f5;
+  --ink:#0b2a57; --ink2:#3c5a8a; --accent:#1553c7; --accent-ink:#ffffff; --accent-soft:#d3e3fc;
+  --head:#0f3d91; --head-ink:#ffffff;
+  --font:"IBM Plex Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#08142b; --surface:#0e1f40; --surface2:#142a53; --line:#24427a;
+  --ink:#e3edff; --ink2:#9db7e6; --accent:#5b9bff; --accent-ink:#05122a; --accent-soft:#1a3669;
+  --head:#173a7a; --head-ink:#e3edff; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#08142b; --surface:#0e1f40; --surface2:#142a53; --line:#24427a;
+  --ink:#e3edff; --ink2:#9db7e6; --accent:#5b9bff; --accent-ink:#05122a; --accent-soft:#1a3669;
+  --head:#173a7a; --head-ink:#e3edff; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:1.6rem;margin:0;font-weight:700;text-wrap:balance}
+.sub{color:var(--ink2);margin:0;font-size:.9rem}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.stat span{display:block;color:var(--ink2);font-size:.8rem}
+.stat b{font-size:1.25rem;font-variant-numeric:tabular-nums;color:var(--accent)}
+.bar{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;grid-template-columns:2fr repeat(3,1fr) auto;gap:10px;align-items:end}
+@media (max-width:820px){.bar{grid-template-columns:1fr 1fr}.bar .search{grid-column:1/-1}}
+@media (max-width:420px){.bar{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--ink2);min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:9px 10px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:5px;border:1px solid var(--accent);padding:9px 14px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.ghost{background:transparent;color:var(--accent)}
+button.ghost:hover{background:var(--accent-soft)}
+.count{color:var(--ink2);font-size:.85rem}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:10px 12px;text-align:right;white-space:nowrap}
+thead th{background:var(--head);color:var(--head-ink);font-weight:600;font-size:.85rem;position:sticky;top:0;cursor:pointer;user-select:none}
+thead th[aria-sort="ascending"]::after{content:" ▲";font-size:.65rem}
+thead th[aria-sort="descending"]::after{content:" ▼";font-size:.65rem}
+tbody tr:nth-child(even){background:var(--surface2)}
+tbody tr:hover{background:var(--accent-soft)}
+td.num{font-variant-numeric:tabular-nums}
+td.tel{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.78rem;font-weight:600;border:1px solid var(--accent)}
+.s-paid{background:var(--accent);color:var(--accent-ink)}
+.s-part{background:var(--accent-soft);color:var(--accent)}
+.s-none{background:transparent;color:var(--accent);border-style:dashed}
+.empty{padding:28px;text-align:center;color:var(--ink2)}
+.del{padding:3px 9px;font-size:.8rem}
+details{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px;align-items:end}
+.note{color:var(--ink2);font-size:.8rem;margin:0}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>توزيع المبيعات على أصحاب المحلات</h1>
+      <p class="sub">ابحث بالاسم أو رقم التليفون، وفلتر بالمنطقة والصنف وحالة السداد.</p>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="ملخص">
+    <div class="stat"><span>عدد العملاء</span><b id="sCount">0</b></div>
+    <div class="stat"><span>إجمالي المبيعات</span><b id="sTotal">0</b></div>
+    <div class="stat"><span>المسدد</span><b id="sPaid">0</b></div>
+    <div class="stat"><span>المتبقي</span><b id="sRest">0</b></div>
+  </section>
+
+  <section class="bar" aria-label="بحث وفلترة">
+    <label class="search">بحث بالاسم أو رقم التليفون
+      <input id="q" type="search" placeholder="مثال: أحمد أو 0100" autocomplete="off">
+    </label>
+    <label>المنطقة <select id="fArea"><option value="">الكل</option></select></label>
+    <label>الصنف <select id="fProd"><option value="">الكل</option></select></label>
+    <label>الحالة
+      <select id="fStat"><option value="">الكل</option><option value="paid">مسدد</option><option value="part">سداد جزئي</option><option value="none">لم يسدد</option></select>
+    </label>
+    <button class="ghost" id="reset" type="button">مسح الفلاتر</button>
+  </section>
+
+  <div class="count" id="count" aria-live="polite"></div>
+
+  <div class="tablebox">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>لا توجد نتائج مطابقة. جرّب كلمة بحث أخرى أو امسح الفلاتر.</div>
+  </div>
+
+  <details>
+    <summary>إضافة عميل جديد</summary>
+    <form id="add">
+      <label>الاسم <input id="aName" required></label>
+      <label>رقم التليفون <input id="aTel" required inputmode="tel"></label>
+      <label>اسم المحل <input id="aShop"></label>
+      <label>المنطقة <input id="aArea" required></label>
+      <label>الصنف <input id="aProd" required></label>
+      <label>الكمية <input id="aQty" type="number" min="0" required></label>
+      <label>إجمالي الفاتورة (ج.م) <input id="aTotal" type="number" min="0" required></label>
+      <label>المدفوع (ج.م) <input id="aPaid" type="number" min="0" value="0"></label>
+      <button type="submit">إضافة</button>
+    </form>
+    <p class="note" style="margin-top:10px">البيانات الحالية أمثلة. التعديلات تتحفظ في متصفحك فقط.</p>
+  </details>
+</div>
+
+<script>
+const KEY="sales-dist-v1";
+const seed=[
+ {n:"أحمد محمود السيد",t:"01012345678",s:"سوبر ماركت النور",a:"المعادي",p:"زيت",q:40,tot:12000,paid:12000},
+ {n:"محمد عبد الله",t:"01123456789",s:"بقالة الأمل",a:"مدينة نصر",p:"سكر",q:60,tot:9000,paid:4000},
+ {n:"خالد إبراهيم",t:"01234567890",s:"ميني ماركت السلام",a:"الهرم",p:"أرز",q:30,tot:7500,paid:0},
+ {n:"مصطفى حسن",t:"01098765432",s:"هايبر الخير",a:"حلوان",p:"زيت",q:80,tot:24000,paid:20000},
+ {n:"إسلام جمال",t:"01155667788",s:"محل الفتح",a:"شبرا",p:"شاي",q:25,tot:6250,paid:6250},
+ {n:"يوسف عادل",t:"01277889900",s:"سوبر ماركت البركة",a:"المعادي",p:"سكر",q:50,tot:7500,paid:7500},
+ {n:"عمرو سعيد",t:"01011223344",s:"بقالة الحرية",a:"الهرم",p:"شاي",q:20,tot:5000,paid:1500},
+ {n:"حسام فتحي",t:"01166554433",s:"ميني ماركت المدينة",a:"مدينة نصر",p:"أرز",q:45,tot:11250,paid:11250},
+ {n:"طارق رمضان",t:"01222334455",s:"محل رمضان",a:"شبرا",p:"زيت",q:35,tot:10500,paid:3000},
+ {n:"سامح منصور",t:"01088990011",s:"سوبر ماركت الوفاء",a:"حلوان",p:"سكر",q:70,tot:10500,paid:0},
+ {n:"كريم نبيل",t:"01199001122",s:"بقالة التوحيد",a:"المعادي",p:"شاي",q:30,tot:7500,paid:7500},
+ {n:"هاني وجدي",t:"01233445566",s:"هايبر الإخوة",a:"الهرم",p:"أرز",q:90,tot:22500,paid:15000}
+];
+let data;
+try{const raw=localStorage.getItem(KEY);data=raw?JSON.parse(raw):null}catch(e){data=null}
+if(!Array.isArray(data))data=seed.map(x=>({...x}));
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+
+const cols=[
+ ["n","الاسم"],["t","التليفون"],["s","المحل"],["a","المنطقة"],["p","الصنف"],
+ ["q","الكمية"],["tot","الإجمالي"],["paid","المدفوع"],["rest","المتبقي"],["st","الحالة"]
+];
+let sortKey=null,sortDir=1;
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("ar-EG");
+const stat=r=>r.paid>=r.tot?"paid":(r.paid>0?"part":"none");
+const stLabel={paid:"مسدد",part:"سداد جزئي",none:"لم يسدد"};
+const digits=s=>String(s).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[^\d]/g,"");
+const norm=s=>String(s).toLowerCase().replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/[ً-ْ]/g,"").trim();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function fillSelect(id,key){
+  const el=$(id),cur=el.value;
+  const vals=[...new Set(data.map(r=>r[key]))].sort((a,b)=>a.localeCompare(b,"ar"));
+  el.innerHTML='<option value="">الكل</option>'+vals.map(v=>`<option>${esc(v)}</option>`).join("");
+  el.value=vals.includes(cur)?cur:"";
+}
+$("head").innerHTML='<th>م</th>'+cols.map(c=>`<th data-k="${c[0]}" tabindex="0" role="columnheader">${c[1]}</th>`).join("")+"<th></th>";
+$("head").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-k]");if(!th)return;
+  const k=th.dataset.k;sortDir=(sortKey===k)?-sortDir:1;sortKey=k;render();
+});
+$("head").addEventListener("keydown",e=>{if(e.key==="Enter")e.target.click()});
+
+function render(){
+  const q=$("q").value,qn=norm(q),qd=digits(q);
+  const area=$("fArea").value,prod=$("fProd").value,st=$("fStat").value;
+  let rows=data.map((r,i)=>({...r,i,rest:Math.max(0,r.tot-r.paid),st:stat(r)}));
+  rows=rows.filter(r=>{
+    if(area&&r.a!==area)return false;
+    if(prod&&r.p!==prod)return false;
+    if(st&&r.st!==st)return false;
+    if(q.trim()){
+      const byName=norm(r.n).includes(qn);
+      const byTel=qd.length>0&&digits(r.t).includes(qd);
+      if(!byName&&!byTel)return false;
+    }
+    return true;
+  });
+  if(sortKey){
+    rows.sort((a,b)=>{
+      const x=a[sortKey],y=b[sortKey];
+      return (typeof x==="number"?x-y:String(x).localeCompare(String(y),"ar"))*sortDir;
+    });
+  }
+  document.querySelectorAll("#head th[data-k]").forEach(th=>{
+    th.setAttribute("aria-sort",th.dataset.k===sortKey?(sortDir>0?"ascending":"descending"):"none");
+  });
+  $("rows").innerHTML=rows.map((r,k)=>`<tr>
+    <td class="num">${fmt(k+1)}</td><td>${esc(r.n)}</td><td class="tel">${esc(r.t)}</td><td>${esc(r.s||"—")}</td><td>${esc(r.a)}</td><td>${esc(r.p)}</td>
+    <td class="num">${fmt(r.q)}</td><td class="num">${fmt(r.tot)}</td><td class="num">${fmt(r.paid)}</td><td class="num">${fmt(r.rest)}</td>
+    <td><span class="pill s-${r.st}">${stLabel[r.st]}</span></td>
+    <td><button class="ghost del" data-i="${r.i}" type="button">حذف</button></td></tr>`).join("");
+  $("empty").hidden=rows.length>0;
+  $("count").textContent=`عرض ${fmt(rows.length)} من ${fmt(data.length)} عميل`;
+  const tot=rows.reduce((s,r)=>s+r.tot,0),paid=rows.reduce((s,r)=>s+r.paid,0);
+  $("sCount").textContent=fmt(rows.length);
+  $("sTotal").textContent=fmt(tot)+" ج.م";
+  $("sPaid").textContent=fmt(paid)+" ج.م";
+  $("sRest").textContent=fmt(Math.max(0,tot-paid))+" ج.م";
+}
+["q","fArea","fProd","fStat"].forEach(id=>$(id).addEventListener("input",render));
+$("reset").onclick=()=>{["q","fArea","fProd","fStat"].forEach(id=>$(id).value="");render()};
+$("rows").addEventListener("click",e=>{
+  const b=e.target.closest(".del");if(!b)return;
+  if(b.dataset.arm!=="1"){b.dataset.arm="1";b.textContent="تأكيد الحذف";setTimeout(()=>{b.dataset.arm="";b.textContent="حذف"},3000);return}
+  data.splice(Number(b.dataset.i),1);save();fillSelect("fArea","a");fillSelect("fProd","p");render();
+});
+$("add").addEventListener("submit",e=>{
+  e.preventDefault();
+  data.unshift({n:$("aName").value.trim(),t:$("aTel").value.trim(),s:$("aShop").value.trim(),a:$("aArea").value.trim(),
+    p:$("aProd").value.trim(),q:+$("aQty").value,tot:+$("aTotal").value,paid:+($("aPaid").value||0)});
+  save();$("add").reset();$("aPaid").value=0;fillSelect("fArea","a");fillSelect("fProd","p");render();
+});
+fillSelect("fArea","a");fillSelect("fProd","p");render();
+</script>
+</body>
+</html>
